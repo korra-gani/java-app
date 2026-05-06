@@ -2,14 +2,14 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "yourdockerhubusername/java-demo-app"
+        DOCKER_IMAGE = "korragani/java-demo-app"
     }
 
     stages {
 
         stage('Build Maven') {
             steps {
-                sh 'mvn clean package'
+                sh '/usr/bin/mvn clean package'
             }
         }
 
@@ -26,7 +26,7 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-
+                    
                     sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
                     sh 'docker push $DOCKER_IMAGE:latest'
                 }
@@ -39,7 +39,7 @@ pipeline {
             echo 'Pipeline completed successfully!'
         }
         failure {
-            echo 'Pipeline failed'
+            echo 'Pipeline failed!'
         }
     }
 }
