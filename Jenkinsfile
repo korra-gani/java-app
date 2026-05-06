@@ -2,16 +2,10 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "ganesh1452/java-demo-app"
+        DOCKER_IMAGE = "yourdockerhubusername/java-demo-app"
     }
 
     stages {
-
-        stage('Clone') {
-            steps {
-                git 'https://github.com/korra-gani/java-app.git'
-            }
-        }
 
         stage('Build Maven') {
             steps {
@@ -28,14 +22,13 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
+                    credentialsId: 'dockerhub',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh '''
-                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                    docker push $DOCKER_IMAGE:latest
-                    '''
+
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                    sh 'docker push $DOCKER_IMAGE:latest'
                 }
             }
         }
@@ -43,7 +36,7 @@ pipeline {
 
     post {
         success {
-            echo 'Pipeline success'
+            echo 'Pipeline completed successfully!'
         }
         failure {
             echo 'Pipeline failed'
