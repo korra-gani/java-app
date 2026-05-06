@@ -1,0 +1,62 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "ganesh1452/java-demo-app"
+    }
+
+    stages {
+
+        stage('Clone') {
+            steps {
+                git 'https://github.com/korra-gani/java-app.git'
+            }
+        }
+
+        stage('Build Maven') {
+            steps {
+                bat 'mvn clean package'
+            }
+        }
+
+        stage('Build Docker') {
+            steps {
+                bat 'docker build -t %DOCKER_IMAGE%:latest .'
+            }
+        }
+
+        stage('Docker Push') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub',
+                    usernameVariable: 'USER',
+                    passwordVariable: 'PASS'
+                )]) {
+
+                    bat '''
+                    docker login -u %USER% -p %PASS%
+                    docker push %DOCKER_IMAGE%:latest
+                    '''
+                }
+            }
+        }
+
+        stage('Update Manifest Repo') {
+            steps {
+                bat '''
+                git clone https://github.com/korra-gani/k8s-manifests.git
+
+                cd k8s-manifests
+
+                git pull
+
+                powershell -Command "(Get-Content deployment.yaml) -replace 'image:.*','image: ganesh1452/java-demo-app:latest' | Set-Content deployment.yaml"
+
+                git add .
+                git commit -m "updated image"
+                git push
+                '''
+            }
+        }
+    }
+}
