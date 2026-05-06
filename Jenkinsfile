@@ -10,7 +10,8 @@ pipeline {
 
         stage('Clone App Repo') {
             steps {
-                git branch: 'main', url: 'https://github.com/korra-gani/java-app.git'
+                git branch: 'main',
+                url: 'https://github.com/korra-gani/java-app.git'
             }
         }
 
@@ -22,7 +23,9 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                bat 'docker build -t %DOCKER_IMAGE%:latest .'
+                bat '''
+                docker build -t %DOCKER_IMAGE%:latest .
+                '''
             }
         }
 
@@ -47,9 +50,11 @@ pipeline {
                     credentialsId: 'github-token',
                     variable: 'GITHUB_TOKEN'
                 )]) {
-
                     bat '''
-                    rmdir /s /q k8s-manifests
+                    
+                    IF EXIST k8s-manifests (
+                        rmdir /s /q k8s-manifests
+                    )
 
                     git clone https://%GITHUB_TOKEN%@github.com/korra-gani/k8s-manifests.git
 
@@ -60,12 +65,24 @@ pipeline {
                     git config user.email "korraganesh9490@gmail.com"
                     git config user.name "korra-gani"
 
-                    git add .
-                    git commit -m "Updated Docker image"
+                    git add deployment.yaml
+
+                    git commit -m "Updated deployment image" || echo No changes to commit
+
                     git push origin main
                     '''
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline executed successfully'
+        }
+
+        failure {
+            echo 'Pipeline failed'
         }
     }
 }
