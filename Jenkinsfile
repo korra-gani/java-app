@@ -3,73 +3,38 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "ganesh1452/java-demo-app"
-        MANIFEST_REPO = "https://github.com/korra-gani/k8s-manifests.git"
     }
 
     stages {
 
-        stage('Clone App Repo') {
+        stage('Clone') {
             steps {
-                git branch: 'main',
-                url: 'https://github.com/korra-gani/java-app.git'
+                git 'https://github.com/korra-gani/java-app.git'
             }
         }
 
         stage('Build Maven') {
             steps {
-                bat 'mvn clean package'
+                sh 'mvn clean package'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                bat '''
-                docker build -t %DOCKER_IMAGE%:latest .
-                '''
+                sh 'docker build -t $DOCKER_IMAGE:latest .'
             }
         }
 
         stage('Push Docker Image') {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub',
+                    credentialsId: 'dockerhub-creds',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    bat '''
-                    docker login -u %DOCKER_USER% -p %DOCKER_PASS%
-                    docker push %DOCKER_IMAGE%:latest
-                    '''
-                }
-            }
-        }
-
-        stage('Update K8s Manifest Repo') {
-            steps {
-                withCredentials([string(
-                    credentialsId: 'github-token',
-                    variable: 'GITHUB_TOKEN'
-                )]) {
-                    bat '''
-                    
-                    IF EXIST k8s-manifests (
-                        rmdir /s /q k8s-manifests
-                    )
-
-                    git clone https://%GITHUB_TOKEN%@github.com/korra-gani/k8s-manifests.git
-
-                    cd k8s-manifests
-
-                    powershell -Command "(Get-Content deployment.yaml) -replace 'image:.*','image: ganesh1452/java-demo-app:latest' | Set-Content deployment.yaml"
-
-                    git config user.email "korraganesh9490@gmail.com"
-                    git config user.name "korra-gani"
-
-                    git add deployment.yaml
-
-                    git commit -m "Updated deployment image" || echo No changes to commit
-
-                    git push origin main
+                    sh '''
+                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                    docker push $DOCKER_IMAGE:latest
                     '''
                 }
             }
@@ -78,9 +43,8 @@ pipeline {
 
     post {
         success {
-            echo 'Pipeline executed successfully'
+            echo 'Pipeline success'
         }
-
         failure {
             echo 'Pipeline failed'
         }
